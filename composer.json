@@ -1,0 +1,33 @@
+{
+    "name": "axguowen/think-jwtclient",
+    "description": "Simple JsonWebToken Client For ThinkPHP",
+    "keywords": [
+        "thinkphp",
+        "jwt",
+        "client"
+    ],      
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "axguowen",
+            "email": "axguowen@qq.com"
+        }
+    ],
+    "require": {
+        "topthink/framework": "^6.1",
+        "lcobucci/jwt": "^4.0"
+        
+    },
+    "autoload": {
+        "psr-4": {
+            "think\\": "src"
+        }
+    },
+    "extra": {
+        "think": {
+            "config": {
+                "jwtclient": "src/config.php"
+            }
+        }
+    }
+}
