@@ -82,7 +82,7 @@ class Handler
     }
 
     /**
-     * 颁发token
+     * 颁发令牌
      * @access public
      * @param array $data 数据
      * @param int $expire 过期时间
@@ -121,67 +121,97 @@ class Handler
     }
 
     /**
-     * 解析token
+     * 解析令牌数据
      * @access public
-     * @param string $token token值
+     * @param string $token 令牌内容
      * @return array
      */
     public function parse(string $token)
-	{
-        // 实例化解析器
-        $parser = new Parser(new JoseEncoder());
-        // 尝试解析
-        try {
-            $token = $parser->parse($token);
-            assert($token instanceof UnencryptedToken);
-        } catch (\Throwable $e) {
-            return [null, new \Exception('Token解析失败: ' . $e->getMessage(), 400)];
+    {
+        // 获取解析对象
+        $decryptResult = $this->decrypt($token);
+        // 如果解析失败
+        if(is_null($decryptResult[0])){
+            // 返回
+            return $decryptResult;
         }
-
-        // 验证token是否有效
-        return $this->validate($token);
+        // 获取解密对象
+        $unencryptedToken = $decryptResult[0];
+        // 返回结果
+        return [$unencryptedToken->claims()->get('data'), null];
     }
 
     /**
-     * 验证token是否有效
-     * @access protected
-     * @param UnencryptedToken $token 解析后的token对象
+     * 验证令牌是否有效
+     * @access public
+     * @param string $token 令牌内容
      * @return array
      */
-    protected function validate($token)
+    public function validate(string $token)
 	{
+        // 获取解析对象
+        $decryptResult = $this->decrypt($token);
+        // 如果解析失败
+        if(is_null($decryptResult[0])){
+            // 返回
+            return $decryptResult;
+        }
+        // 获取解密对象
+        $unencryptedToken = $decryptResult[0];
         // 实例化验证器
         $validator = new Validator();
-        // 获取载荷对象
-        $claims = $token->claims();
         // 尝试验证
         try {
             // 验证是否过期
-            $validator->assert($token, new StrictValidAt(new \Lcobucci\Clock\SystemClock(new \DateTimeZone(Config::get('app.default_timezone', 'Asia/Shanghai')))));
+            $validator->assert($unencryptedToken, new StrictValidAt(new \Lcobucci\Clock\SystemClock(new \DateTimeZone(Config::get('app.default_timezone', 'Asia/Shanghai')))));
             // 校验签名
             $signKey = InMemory::plainText(hash('md5', $this->options['sign_key']));
-            $validator->assert($token, new SignedWith(new Sha256(), $signKey));
+            $validator->assert($unencryptedToken, new SignedWith(new Sha256(), $signKey));
             // 如果颁发者不为空
             if(!empty($this->options['issuer'])){
-                $validator->assert($token, new IssuedBy($this->options['issuer']));
+                $validator->assert($unencryptedToken, new IssuedBy($this->options['issuer']));
             }
             // 如果接收者不为空
             if(!empty($this->options['audience'])){
-                $validator->assert($token, new PermittedFor($this->options['audience']));
+                $validator->assert($unencryptedToken, new PermittedFor($this->options['audience']));
             }
             // 如果识别码不为空
             if(!empty($this->options['id'])){
-                $validator->assert($token, new IdentifiedBy($this->options['id']));
+                $validator->assert($unencryptedToken, new IdentifiedBy($this->options['id']));
             }
             // 如果关联对象不为空
             if(!empty($this->options['subject'])){
-                $validator->assert($token, new RelatedTo($this->options['subject']));
+                $validator->assert($unencryptedToken, new RelatedTo($this->options['subject']));
             }
         } catch (RequiredConstraintsViolated $e) {
             // 返回
             return [null, new \Exception('Token验证失败: ' . $e->getMessage(), 401)];
         }
 
-        return [$token->claims()->get('data'), null];
+        return [$unencryptedToken->claims()->get('data'), null];
+    }
+
+    /**
+     * 解密令牌
+     * @access protected
+     * @param string $token 令牌内容
+     * @return array
+     */
+    protected function decrypt(string $token)
+	{
+        // 格式化
+        $token = trim(str_ireplace('Bearer', '', $token));
+        // 实例化解析器
+        $parser = new Parser(new JoseEncoder());
+        // 尝试解析
+        try {
+            $unencryptedToken = $parser->parse($token);
+            assert($unencryptedToken instanceof UnencryptedToken);
+        } catch (\Throwable $e) {
+            return [null, new \Exception('Token解析失败: ' . $e->getMessage(), 400)];
+        }
+
+        // 返回解析结果
+        return [$unencryptedToken, null];
     }
 }

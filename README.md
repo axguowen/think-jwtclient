@@ -42,20 +42,38 @@ $jwtClient = \think\facade\JwtClient::platform('admin', [
 echo $token;
 ~~~
 
-## 解析并验证Token
+## 验证Token并获取解析内容
+
+~~~php
+use think\facade\JwtClient;
+// 获取验证结果
+$validateResult = JwtClient::validate($token);
+// 验证成功
+if(!is_null($validateResult[0])){
+    // 打印令牌数据
+    print_r($validateResult[0]);
+}
+// 验证失败
+else{
+    // 输出错误信息
+    echo $validateResult[1]->getMessage();
+}
+~~~
+
+## 解析Token
 
 ~~~php
 use think\facade\JwtClient;
 // 获取解析结果
-$parse = JwtClient::parse($token);
-// 解析成功
-if(!is_null($parse[0])){
-    // 打印解析的数据
-    print_r($parse[0]);
+$parseResult = JwtClient::parse($token);
+// 验证成功
+if(!is_null($parseResult[0])){
+    // 打印令牌数据
+    print_r($parseResult[0]);
 }
 // 解析失败
 else{
     // 输出错误信息
-    echo $parse[1]->getMessage();
+    echo $parseResult[1]->getMessage();
 }
 ~~~
