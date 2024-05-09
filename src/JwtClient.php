@@ -92,7 +92,13 @@ class JwtClient extends Manager
      */
     public function platform($name = null, array $options = [])
     {
-        return $this->driver($name)->setConfig($options);
+        // 如果指定了自定义配置
+        if(!empty($options)){
+            // 创建驱动实例并设置参数
+            return $this->createDriver($name)->setConfig($options);
+        }
+        // 返回已有驱动实例
+        return $this->driver($name);
     }
 
 	/**
